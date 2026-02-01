@@ -1,5 +1,11 @@
 # web-embedding 代理指南
 
+**版本**: 3.0  
+**作者**: HMETAO  
+**最后更新**: 2026-02-01
+
+---
+
 ## 构建命令
 
 ```bash
@@ -454,12 +460,81 @@ export const useSplitScreenStore = create<SplitScreenState>((set, get) => ({
 
 ### 当前架构状态
 
-- ✅ **IPC 架构**: 三层分离架构已实现（业务层 → IPC层 → Electron API）
-- ✅ **状态管理**: Zustand 已替换 Context API
-- ✅ **BrowserView**: 基于 BrowserView 的分屏功能已实现
+- ✅ **IPC 架构**: 三层分离架构稳定运行（业务层 → IPC层 → Electron API）
+- ✅ **状态管理**: Zustand + 状态同步机制（事件驱动 + 主动查询 + 定期同步）
+- ✅ **BrowserView**: 基于 BrowserView 的分屏功能完整实现
 - ✅ **TypeScript**: 严格模式启用，无 `any` 类型
+- ✅ **状态同步**: 已实现多重同步机制（挂载同步、焦点同步、定期同步）
+- ✅ **边界计算**: 正确处理 14px 分割线宽度
+- ✅ **性能优化**: 拖动时使用遮罩层，关闭分屏无白屏闪烁
 - ❌ **测试框架**: 未配置（如需请添加 Vitest）
 - ❌ **持久化**: 配置未持久化（如需请集成 electron-store）
+- ❌ **上下分屏**: 仅实现左右分屏，上下分屏待开发
+
+### 已解决问题记录
+
+#### ✅ 问题 1: 重复点击主视图时分割线消失（2026-02-01 修复）
+
+**现象**: 分屏状态下再次点击左侧窗口创建的新窗口无中间杆子
+
+**根本原因**:
+
+1. `createSecondaryView` 检测到次视图已存在时，只更新 URL，不发送 `SECONDARY_CREATED` 事件
+2. 渲染进程的 `isSplit` 状态与主进程不同步
+
+**修复方案**:
+
+1. 在 `createSecondaryView` 中，即使次视图已存在也发送 `SECONDARY_CREATED` 事件
+2. 实现三层状态同步机制（事件驱动 + 主动查询 + 定期同步）
+
+**涉及文件**:
+
+- `src/main/services/viewService.ts:104-119`
+- `src/ipc/channels.ts:15` (新增 GET_DETAILED_STATUS)
+- `src/ipc/types.ts:46` (新增详细状态类型)
+- `src/ipc/main.ts:99-103` (新增状态查询处理器)
+- `src/renderer/src/ipc/browserView.ts:113-130` (新增 getDetailedSplitStatus)
+- `src/renderer/src/hooks/useSplitScreenStore.ts:296-360` (新增状态同步逻辑)
+
+---
+
+#### ✅ 问题 2: 关闭分屏时出现白屏闪烁（2026-02-01 修复）
+
+**现象**: 点击关闭分屏按钮，右侧出现一段时间白色区域
+
+**根本原因**:
+
+1. 次级 BrowserView 立即被销毁
+2. 但 UI 容器仍在执行 300ms 的 CSS 动画
+3. 背景色 `#f3f4f6` 在动画期间可见
+
+**修复方案**:
+
+1. 修改次级视图容器样式：`backgroundColor: isSplit ? '#f3f4f6' : 'transparent'`
+2. 添加 `visibility: isSplit ? 'visible' : 'hidden'`
+
+**涉及文件**:
+
+- `src/renderer/src/pages/MainView.tsx:140-149`
+
+---
+
+#### ✅ 问题 3: 边界计算未考虑分割线宽度（2026-02-01 修复）
+
+**现象**: 分屏后再次点击左侧链接，分割线位置不正确或消失
+
+**根本原因**: `handleNavigation` 方法计算次视图边界时，没有考虑 DOM 中 14px 的分割线宽度
+
+**修复方案**:
+
+1. 次视图 x 坐标：`primaryWidth + 14`
+2. 次视图宽度：`totalWidth - primaryWidth - 14`
+
+**涉及文件**:
+
+- `src/main/services/viewService.ts:450-466`
+
+---
 
 ### Electron 配置
 
