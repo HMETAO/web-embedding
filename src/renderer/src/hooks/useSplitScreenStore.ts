@@ -287,6 +287,33 @@ export function useSplitScreen(): UseSplitScreenReturn {
   }, [isPrimaryViewCreated, setIsSplit])
 
   /**
+   * 同步分屏状态
+   * 主动查询主进程状态并同步本地状态
+   */
+  const syncSplitStatus = useCallback(async () => {
+    if (!isPrimaryViewCreated) return
+
+    try {
+      const detailedStatus = await browserViewIPC.getDetailedSplitStatus()
+
+      // 🔥 关键修复：如果主进程有次视图但本地状态没有，则同步
+      if (detailedStatus.hasSecondaryView && !isSplit) {
+        console.log('[useSplitScreen] 检测到状态不一致，同步分屏状态')
+        setIsSplit(true)
+      }
+
+      // 🔥 关键修复：如果主进程没有次视图但本地状态有，则重置
+      if (!detailedStatus.hasSecondaryView && isSplit) {
+        console.log('[useSplitScreen] 检测到状态不一致，重置分屏状态')
+        setIsSplit(false)
+        setSplitRatio(0.5)
+      }
+    } catch (error) {
+      console.warn('[useSplitScreen] 状态同步失败:', error)
+    }
+  }, [isPrimaryViewCreated, isSplit, setIsSplit, setSplitRatio])
+
+  /**
    * 组件卸载时清理
    */
   useEffect(() => {
@@ -294,6 +321,44 @@ export function useSplitScreen(): UseSplitScreenReturn {
       browserViewIPC.destroyAllViews()
     }
   }, [])
+
+  /**
+   * 🔥 关键修复：组件挂载后同步状态
+   */
+  useEffect(() => {
+    // 延迟同步，等待主进程状态稳定
+    const timer = setTimeout(() => {
+      syncSplitStatus()
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [syncSplitStatus])
+
+  /**
+   * 🔥 关键修复：窗口获得焦点时同步状态
+   */
+  useEffect(() => {
+    const handleFocus = (): void => {
+      syncSplitStatus()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [syncSplitStatus])
+
+  /**
+   * 🔥 关键修复：定期状态检查
+   */
+  useEffect(() => {
+    if (!isPrimaryViewCreated) return
+
+    // 每 5 秒检查一次状态
+    const interval = setInterval(() => {
+      syncSplitStatus()
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [isPrimaryViewCreated, syncSplitStatus])
 
   return {
     // 状态

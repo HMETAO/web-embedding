@@ -101,10 +101,21 @@ export class ViewService {
       return
     }
 
-    // 如果已存在，更新 URL
+    // 如果已存在，更新 URL 并确保状态同步
     if (this.secondaryView) {
       this.secondaryView.webContents.loadURL(url)
       this.updateSecondaryBounds(bounds)
+
+      // 🔥 关键修复：确保 isSplit 状态正确
+      if (!this.isSplit) {
+        this.isSplit = true
+      }
+
+      // 🔥 关键修复：发送事件确保渲染进程同步
+      this.mainWindow.webContents.send(IPCChannels.BrowserView.SECONDARY_CREATED, {
+        url,
+        timestamp: Date.now()
+      })
       return
     }
 
@@ -435,6 +446,7 @@ export class ViewService {
   /**
    * 处理导航事件
    * 主窗口的所有导航都在次级窗口打开
+   * 🔥 关键：边界计算必须考虑 DOM 中分割线的 14px 宽度
    */
   private handleNavigation(url: string): void {
     if (!this.mainWindow || !this.primaryView) {
@@ -445,12 +457,15 @@ export class ViewService {
     // 获取主视图的当前位置
     const primaryBounds = this.primaryView.getBounds()
     const windowBounds = this.mainWindow.getBounds()
+    const dividerWidth = 14 // DOM 中分割线的宽度
 
-    // 创建或更新次级视图（分屏显示）
+    // 🔥 关键修复：边界计算必须考虑分割线宽度
+    // 次视图的 x 坐标 = 主视图右边界 + 分割线宽度
+    // 次视图的宽度 = 窗口宽度 - 主视图宽度 - 分割线宽度
     this.createSecondaryView(url, {
-      x: primaryBounds.x + primaryBounds.width,
+      x: primaryBounds.x + primaryBounds.width + dividerWidth,
       y: primaryBounds.y,
-      width: windowBounds.width - primaryBounds.width,
+      width: Math.max(0, windowBounds.width - primaryBounds.width - dividerWidth),
       height: primaryBounds.height
     })
 
@@ -493,6 +508,23 @@ export class ViewService {
     view.webContents.insertCSS(hideScrollbarCSS).catch((err) => {
       console.warn('[ViewService] 注入滚动条样式失败:', err)
     })
+  }
+  /**
+   * 获取当前分屏状态（详细）
+   * 用于渲染进程查询和状态同步
+   */
+  getSplitStatus(): {
+    isSplit: boolean
+    hasSecondaryView: boolean
+    primaryUrl: string
+    secondaryUrl: string
+  } {
+    return {
+      isSplit: this.isSplit,
+      hasSecondaryView: this.secondaryView !== null,
+      primaryUrl: this.primaryUrl,
+      secondaryUrl: this.secondaryUrl
+    }
   }
 }
 

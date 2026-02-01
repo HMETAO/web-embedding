@@ -96,6 +96,11 @@ class IPCRouter {
       return viewService.getIsSplit()
     })
 
+    // 获取详细状态（使用 invoke/handle 模式）
+    this.register(IPCChannels.BrowserView.GET_DETAILED_STATUS, async () => {
+      return viewService.getSplitStatus()
+    })
+
     // 更新分屏比例
     this.on(IPCChannels.BrowserView.UPDATE_SPLIT_RATIO, (_, { ratio }) => {
       viewService.updateSplitRatio(ratio)

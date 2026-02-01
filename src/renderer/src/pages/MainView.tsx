@@ -143,7 +143,9 @@ function MainView(): React.JSX.Element {
             flexShrink: 0,
             opacity: isSplit ? 1 : 0,
             overflow: 'hidden',
-            backgroundColor: '#f3f4f6',
+            // 🔥 关键修复：关闭分屏时立即隐藏背景，消除白屏闪烁
+            backgroundColor: isSplit ? '#f3f4f6' : 'transparent',
+            visibility: isSplit ? 'visible' : 'hidden',
             // 关键：拖动时禁用 transition，避免闪烁
             transition: isDragging ? 'none' : 'width 0.3s ease-in-out'
           }}

@@ -43,6 +43,7 @@ export interface IPCRequestMap {
   [IPCChannels.BrowserView.DESTROY_SECONDARY]: never // 无参数
   [IPCChannels.BrowserView.DESTROY_ALL]: never // 无参数
   [IPCChannels.BrowserView.GET_STATUS]: never // 无参数
+  [IPCChannels.BrowserView.GET_DETAILED_STATUS]: never // 无参数
   [IPCChannels.BrowserView.UPDATE_SPLIT_RATIO]: {
     ratio: number // 分割比例 0.1-0.9
   }
@@ -57,6 +58,12 @@ export interface IPCRequestMap {
 
 export interface IPCResponseMap {
   [IPCChannels.BrowserView.GET_STATUS]: boolean
+  [IPCChannels.BrowserView.GET_DETAILED_STATUS]: {
+    isSplit: boolean
+    hasSecondaryView: boolean
+    primaryUrl: string
+    secondaryUrl: string
+  }
   [IPCChannels.System.GET_VERSION]: string
 }
 

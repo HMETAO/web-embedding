@@ -107,5 +107,30 @@ export const browserViewIPC = {
    */
   hideOverlay(): void {
     ipc.send(IPCChannels.BrowserView.HIDE_OVERLAY)
+  },
+
+  /**
+   * 获取详细分屏状态
+   */
+  async getDetailedSplitStatus(): Promise<{
+    isSplit: boolean
+    hasSecondaryView: boolean
+    primaryUrl: string
+    secondaryUrl: string
+  }> {
+    const result = (await ipc.invoke(IPCChannels.BrowserView.GET_DETAILED_STATUS)) as IPCResponse<{
+      isSplit: boolean
+      hasSecondaryView: boolean
+      primaryUrl: string
+      secondaryUrl: string
+    }>
+    return result.success
+      ? result.data!
+      : {
+          isSplit: false,
+          hasSecondaryView: false,
+          primaryUrl: '',
+          secondaryUrl: ''
+        }
   }
 }

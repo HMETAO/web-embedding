@@ -12,6 +12,7 @@ export const IPCChannels = {
     DESTROY_SECONDARY: 'browser-view:destroy-secondary',
     DESTROY_ALL: 'browser-view:destroy-all',
     GET_STATUS: 'browser-view:get-status',
+    GET_DETAILED_STATUS: 'browser-view:get-detailed-status',
 
     // 分割比例调整
     UPDATE_SPLIT_RATIO: 'browser-view:update-split-ratio',
