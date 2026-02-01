@@ -13,9 +13,15 @@ export const IPCChannels = {
     DESTROY_ALL: 'browser-view:destroy-all',
     GET_STATUS: 'browser-view:get-status',
 
-    // 设备模拟（响应式视口适配）
-    ENABLE_DEVICE_EMULATION: 'browser-view:enable-device-emulation',
-    DISABLE_DEVICE_EMULATION: 'browser-view:disable-device-emulation',
+    // 分割比例调整
+    UPDATE_SPLIT_RATIO: 'browser-view:update-split-ratio',
+
+    // 遮罩层控制（拖动时显示遮罩）
+    SHOW_OVERLAY: 'browser-view:show-overlay',
+    HIDE_OVERLAY: 'browser-view:hide-overlay',
+
+    // 滚动条控制（拖动时显示/隐藏）
+    TOGGLE_SCROLLBAR: 'browser-view:toggle-scrollbar',
 
     // 事件通知（主进程 → 渲染进程）
     SECONDARY_CREATED: 'browser-view:secondary-created',

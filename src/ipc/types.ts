@@ -43,12 +43,14 @@ export interface IPCRequestMap {
   [IPCChannels.BrowserView.DESTROY_SECONDARY]: never // 无参数
   [IPCChannels.BrowserView.DESTROY_ALL]: never // 无参数
   [IPCChannels.BrowserView.GET_STATUS]: never // 无参数
-  [IPCChannels.BrowserView.ENABLE_DEVICE_EMULATION]: {
-    viewType: 'primary' | 'secondary'
-    mode: DeviceMode
+  [IPCChannels.BrowserView.UPDATE_SPLIT_RATIO]: {
+    ratio: number // 分割比例 0.1-0.9
   }
-  [IPCChannels.BrowserView.DISABLE_DEVICE_EMULATION]: {
+  [IPCChannels.BrowserView.SHOW_OVERLAY]: never // 无参数
+  [IPCChannels.BrowserView.HIDE_OVERLAY]: never // 无参数
+  [IPCChannels.BrowserView.TOGGLE_SCROLLBAR]: {
     viewType: 'primary' | 'secondary'
+    visible: boolean // true=显示, false=隐藏
   }
   [IPCChannels.System.GET_VERSION]: never // 无参数
 }

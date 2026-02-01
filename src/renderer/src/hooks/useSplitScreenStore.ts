@@ -35,12 +35,14 @@ interface SplitScreenState {
   primaryUrl: string | null
   isPrimaryViewCreated: boolean
   windowSize: WindowSize
+  splitRatio: number // 分割比例 0.1-0.9
 
   // Actions - 修改状态的方法
   setIsSplit: (isSplit: boolean) => void
   setPrimaryUrl: (url: string | null) => void
   setIsPrimaryViewCreated: (created: boolean) => void
   setWindowSize: (size: WindowSize) => void
+  setSplitRatio: (ratio: number) => void
 }
 
 /**
@@ -56,12 +58,14 @@ export const useSplitScreenStore = create<SplitScreenState>((set) => ({
     width: window.innerWidth,
     height: window.innerHeight
   },
+  splitRatio: 0.5, // 默认 50% 分割
 
   // Actions
   setIsSplit: (isSplit) => set({ isSplit }),
   setPrimaryUrl: (primaryUrl) => set({ primaryUrl }),
   setIsPrimaryViewCreated: (isPrimaryViewCreated) => set({ isPrimaryViewCreated }),
-  setWindowSize: (windowSize) => set({ windowSize })
+  setWindowSize: (windowSize) => set({ windowSize }),
+  setSplitRatio: (splitRatio) => set({ splitRatio: Math.max(0.1, Math.min(0.9, splitRatio)) })
 }))
 
 /**
@@ -72,12 +76,14 @@ interface UseSplitScreenReturn {
   primaryUrl: string | null
   isPrimaryViewCreated: boolean
   windowSize: WindowSize
+  splitRatio: number
   primaryContainerRef: React.RefObject<HTMLDivElement | null>
   secondaryContainerRef: React.RefObject<HTMLDivElement | null>
   navigate: (url: string) => void
   goHome: () => void
   openSplit: () => void
   closeSplit: () => void
+  updateSplitRatio: (ratio: number) => void
 }
 
 /**
@@ -92,10 +98,12 @@ export function useSplitScreen(): UseSplitScreenReturn {
     primaryUrl,
     isPrimaryViewCreated,
     windowSize,
+    splitRatio,
     setIsSplit,
     setPrimaryUrl,
     setIsPrimaryViewCreated,
-    setWindowSize
+    setWindowSize,
+    setSplitRatio
   } = useSplitScreenStore()
 
   // 创建 DOM 引用
@@ -161,7 +169,8 @@ export function useSplitScreen(): UseSplitScreenReturn {
     setPrimaryUrl(null)
     setIsSplit(false)
     setIsPrimaryViewCreated(false)
-  }, [setPrimaryUrl, setIsSplit, setIsPrimaryViewCreated])
+    setSplitRatio(0.5) // 重置分割比例
+  }, [setPrimaryUrl, setIsSplit, setIsPrimaryViewCreated, setSplitRatio])
 
   /**
    * 开启分屏
@@ -176,8 +185,54 @@ export function useSplitScreen(): UseSplitScreenReturn {
   const closeSplit = useCallback(() => {
     browserViewIPC.destroySecondaryView()
     setIsSplit(false)
+    setSplitRatio(0.5) // 重置分割比例
     setTimeout(updateViewBounds, 50)
-  }, [setIsSplit, updateViewBounds])
+  }, [setIsSplit, setSplitRatio, updateViewBounds])
+
+  /**
+   * 更新分屏比例 - 同步更新，消除闪烁
+   * 关键：不使用 requestAnimationFrame，立即同步更新 UI 和 BrowserView
+   */
+  const updateSplitRatio = useCallback(
+    (ratio: number) => {
+      // 限制比例范围
+      const clampedRatio = Math.max(0.1, Math.min(0.9, ratio))
+
+      // 先更新状态（触发 UI 重新渲染）
+      setSplitRatio(clampedRatio)
+
+      // 立即计算并更新 BrowserView 边界
+      // 关键：不使用 requestAnimationFrame，确保与 UI 同步
+      if (primaryContainerRef.current && secondaryContainerRef.current) {
+        const containerWidth = window.innerWidth
+        const containerHeight = window.innerHeight - 40 // 减去导航栏
+
+        // 计算主视图边界
+        const primaryWidth = Math.round(containerWidth * clampedRatio)
+        const primaryBounds = {
+          x: 0,
+          y: 40,
+          width: primaryWidth,
+          height: containerHeight
+        }
+        browserViewIPC.updateBounds('primary', primaryBounds)
+
+        // 计算次级视图边界
+        const secondaryWidth = containerWidth - primaryWidth
+        const secondaryBounds = {
+          x: primaryWidth,
+          y: 40,
+          width: secondaryWidth,
+          height: containerHeight
+        }
+        browserViewIPC.updateBounds('secondary', secondaryBounds)
+
+        // 通知主进程更新分割比例
+        browserViewIPC.updateSplitRatio(clampedRatio)
+      }
+    },
+    [setSplitRatio]
+  )
 
   /**
    * 监听窗口大小变化
@@ -206,7 +261,7 @@ export function useSplitScreen(): UseSplitScreenReturn {
   }, [windowSize, isSplit, isPrimaryViewCreated, updateViewBounds])
 
   /**
-   * 分屏状态变化时更新布局
+   * 分屏状态或比例变化时更新布局
    */
   useEffect(() => {
     if (!isPrimaryViewCreated) return
@@ -216,7 +271,7 @@ export function useSplitScreen(): UseSplitScreenReturn {
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [isSplit, isPrimaryViewCreated, updateViewBounds])
+  }, [isSplit, splitRatio, isPrimaryViewCreated, updateViewBounds])
 
   /**
    * 监听次级视图创建事件
@@ -246,6 +301,7 @@ export function useSplitScreen(): UseSplitScreenReturn {
     primaryUrl,
     isPrimaryViewCreated,
     windowSize,
+    splitRatio,
 
     // 引用
     primaryContainerRef,
@@ -255,6 +311,7 @@ export function useSplitScreen(): UseSplitScreenReturn {
     navigate,
     goHome,
     openSplit,
-    closeSplit
+    closeSplit,
+    updateSplitRatio
   }
 }

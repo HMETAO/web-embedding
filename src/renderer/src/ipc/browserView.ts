@@ -85,5 +85,27 @@ export const browserViewIPC = {
     return ipc.on(IPCChannels.BrowserView.NAVIGATION_BLOCKED, (data) => {
       callback(data as { fromUrl: string; toUrl: string })
     })
+  },
+
+  /**
+   * 更新分屏比例
+   * @param ratio - 分割比例 0.1-0.9
+   */
+  updateSplitRatio(ratio: number): void {
+    ipc.send(IPCChannels.BrowserView.UPDATE_SPLIT_RATIO, { ratio })
+  },
+
+  /**
+   * 显示遮罩层
+   */
+  showOverlay(): void {
+    ipc.send(IPCChannels.BrowserView.SHOW_OVERLAY)
+  },
+
+  /**
+   * 隐藏遮罩层
+   */
+  hideOverlay(): void {
+    ipc.send(IPCChannels.BrowserView.HIDE_OVERLAY)
   }
 }

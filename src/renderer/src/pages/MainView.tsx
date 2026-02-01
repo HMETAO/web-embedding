@@ -1,32 +1,67 @@
 /**
  * @file 主视图组件
  * @description 应用程序主控制器，使用 useSplitScreen Hook 管理分屏状态
- * 简洁的组件结构，通过自定义 Hook 封装所有复杂逻辑
+ * 使用 Flex 布局，为分割线提供独立空间
+ * 拖动时通过 BrowserView 遮罩层减少闪烁视觉影响
  */
 
+import { useState } from 'react'
 import { useSplitScreen } from '@renderer/hooks/useSplitScreenStore'
+import { browserViewIPC } from '@renderer/ipc/browserView'
 import HomePage from '@renderer/pages/Home'
+import { SplitDivider } from '@renderer/components/SplitDivider'
 
 /**
  * 主视图组件
  * 通过 useSplitScreen Hook 获取所有分屏状态和操作函数
- * UI 层与逻辑层分离，代码更清晰易读
+ * 使用 Flex 布局确保分割线有独立的 14px 空间
+ * 拖动时显示 BrowserView 遮罩层覆盖两个视图
  */
 function MainView(): React.JSX.Element {
   const {
     isSplit,
     primaryUrl,
     isPrimaryViewCreated,
+    splitRatio,
     primaryContainerRef,
     secondaryContainerRef,
     navigate,
     goHome,
-    closeSplit
+    closeSplit,
+    updateSplitRatio
   } = useSplitScreen()
+
+  // 拖动状态 - 用于控制是否启用 transition
+  const [isDragging, setIsDragging] = useState(false)
 
   // 未加载主 URL 时显示首页
   if (!primaryUrl) {
     return <HomePage onNavigate={navigate} />
+  }
+
+  /**
+   * 处理比例变化 - 同步更新
+   */
+  const handleRatioChange = (ratio: number): void => {
+    updateSplitRatio(ratio)
+  }
+
+  /**
+   * 处理拖动开始 - 显示遮罩层
+   */
+  const handleDragStart = (): void => {
+    setIsDragging(true)
+    // 显示 BrowserView 遮罩层
+    browserViewIPC.showOverlay()
+  }
+
+  /**
+   * 处理拖动结束 - 隐藏遮罩层
+   */
+  const handleDragEnd = (): void => {
+    setIsDragging(false)
+    // 隐藏 BrowserView 遮罩层
+    browserViewIPC.hideOverlay()
   }
 
   return (
@@ -58,16 +93,19 @@ function MainView(): React.JSX.Element {
         )}
       </div>
 
-      {/* 分屏区域 */}
-      <div className="flex-1 flex w-full overflow-hidden">
+      {/* 分屏区域 - 使用 Flex 布局 */}
+      <div className="flex-1 flex w-full overflow-hidden relative">
         {/* 主视图占位区域 */}
         <div
           ref={primaryContainerRef}
-          className="h-full transition-all duration-300 ease-in-out"
+          className="h-full"
           style={{
-            width: isSplit ? '50%' : '100%',
+            // 减去 7px 为分割线留出空间
+            width: isSplit ? `calc(${splitRatio * 100}% - 7px)` : '100%',
             flexShrink: 0,
-            backgroundColor: isPrimaryViewCreated ? 'transparent' : '#f3f4f6'
+            backgroundColor: isPrimaryViewCreated ? 'transparent' : '#f3f4f6',
+            // 关键：拖动时禁用 transition，避免闪烁
+            transition: isDragging ? 'none' : 'width 0.3s ease-in-out'
           }}
         >
           {!isPrimaryViewCreated && (
@@ -77,23 +115,37 @@ function MainView(): React.JSX.Element {
           )}
         </div>
 
-        {/* 分割线 */}
+        {/* 分割线（仅在分屏模式下显示）- 独立的 14px 空间 */}
         {isSplit && (
-          <div className="h-full w-[2px] bg-gray-300 flex-shrink-0 relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-gray-400 rounded-full" />
+          <div
+            className="h-full flex-shrink-0"
+            style={{
+              width: '14px',
+              backgroundColor: 'transparent',
+              position: 'relative'
+            }}
+          >
+            <SplitDivider
+              onRatioChange={handleRatioChange}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            />
           </div>
         )}
 
         {/* 次级视图占位区域 */}
         <div
           ref={secondaryContainerRef}
-          className="h-full transition-all duration-300 ease-in-out relative"
+          className="h-full relative"
           style={{
-            width: isSplit ? '50%' : '0%',
+            // 减去 7px 为分割线留出空间
+            width: isSplit ? `calc(${(1 - splitRatio) * 100}% - 7px)` : '0%',
             flexShrink: 0,
             opacity: isSplit ? 1 : 0,
             overflow: 'hidden',
-            backgroundColor: '#f3f4f6'
+            backgroundColor: '#f3f4f6',
+            // 关键：拖动时禁用 transition，避免闪烁
+            transition: isDragging ? 'none' : 'width 0.3s ease-in-out'
           }}
         >
           {isSplit && (

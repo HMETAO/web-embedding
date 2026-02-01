@@ -95,6 +95,21 @@ class IPCRouter {
     this.register(IPCChannels.BrowserView.GET_STATUS, async () => {
       return viewService.getIsSplit()
     })
+
+    // 更新分屏比例
+    this.on(IPCChannels.BrowserView.UPDATE_SPLIT_RATIO, (_, { ratio }) => {
+      viewService.updateSplitRatio(ratio)
+    })
+
+    // 显示覆盖层
+    this.on(IPCChannels.BrowserView.SHOW_OVERLAY, () => {
+      viewService.showOverlay()
+    })
+
+    // 隐藏覆盖层
+    this.on(IPCChannels.BrowserView.HIDE_OVERLAY, () => {
+      viewService.hideOverlay()
+    })
   }
 
   private registerWindowHandlers(): void {

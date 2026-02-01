@@ -15,7 +15,9 @@ import { viewService } from './services/viewService'
  * 启用远程调试端口
  * 使 MCP server 能够通过 Chrome DevTools Protocol 连接和自动化控制应用
  */
-if (is.dev) {
+const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev')
+
+if (isDev) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
   console.log('[Electron] 远程调试端口已启用: 9222')
 }
