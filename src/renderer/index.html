@@ -1,0 +1,28 @@
+<!doctype html>
+<html style="height: 100%; margin: 0; padding: 0; overflow: hidden">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Web Embedding</title>
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src *; script-src *; style-src * 'unsafe-inline'; img-src * data:; font-src *; connect-src *; frame-src *; object-src *; media-src *; child-src *;"
+    />
+    <style>
+      /* 确保页面充满视口且无滚动条 */
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
